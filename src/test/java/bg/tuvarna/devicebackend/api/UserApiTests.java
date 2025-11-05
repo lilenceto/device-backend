@@ -17,32 +17,34 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class UserApiTests {
+
     @Autowired
     private MockMvc mvc;
+
     @Autowired
     private WebApplicationContext context;
+
     @Autowired
     private ObjectMapper mapper;
+
     @Autowired
     private UserRepository userRepository;
+
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void setUp() {
-        mvc = MockMvcBuilders
-                .webAppContextSetup(context)
+        mvc = MockMvcBuilders.webAppContextSetup(context)
                 .apply(springSecurity())
                 .build();
 
@@ -50,6 +52,7 @@ class UserApiTests {
                 .fullName("gosho")
                 .email("gosho@abv.bg")
                 .password(passwordEncoder.encode("Az$um_GOSHO123"))
+                .phone("0888123456")
                 .role(UserRole.USER)
                 .build();
 
@@ -62,24 +65,24 @@ class UserApiTests {
     }
 
     @Test
-    void userRegistrationFailed() throws Exception {
-        MvcResult registration1 = mvc.perform(
-                post("/api/v1/users/registration")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "fullName": "Georgi Ivanov",
-                                  "email": "gosho@abv.bg",
-                                  "phone": "123456789",
-                                  "username": "gosho123",
-                                  "password": "Az$um_GOSHO123"
-                                }
-                                """)
-        ).andReturn();
-        assertEquals(400, registration1.getResponse().getStatus());
+    void userRegistrationShouldFailWhenEmailExists() throws Exception {
+        MvcResult registration = mvc.perform(
+                        post("/api/v1/users/registration")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "fullName": "Georgi Ivanov",
+                                          "email": "gosho@abv.bg",
+                                          "phone": "123456789",
+                                          "password": "Az$um_GOSHO123"
+                                        }
+                                        """)
+                )
+                .andExpect(status().isBadRequest())
+                .andReturn();
 
         ErrorResponse errorResponse = mapper.readValue(
-                registration1.getResponse().getContentAsString(),
+                registration.getResponse().getContentAsString(),
                 ErrorResponse.class
         );
 
@@ -87,25 +90,45 @@ class UserApiTests {
     }
 
     @Test
-    void userLoginSuccess() throws Exception {
+    void userLoginShouldSucceed() throws Exception {
         mvc.perform(
-                    post("/api/v1/users/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("""
-                                    {
-                                      "username": "gosho@abv.bg",
-                                      "password": "Az$um_GOSHO123"
-                                    }""")
+                        post("/api/v1/users/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "username": "gosho@abv.bg",
+                                          "password": "Az$um_GOSHO123"
+                                        }
+                                        """)
                 )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").isNotEmpty());
+                .andExpect(jsonPath("$.token").exists());
     }
 
     @Test
-    void accessProtectedEndpointWithoutToken() throws Exception {
+    void userLoginShouldFailWithInvalidPassword() throws Exception {
         mvc.perform(
-                        get("/api/v1/users/getUser")
+                        post("/api/v1/users/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "username": "gosho@abv.bg",
+                                          "password": "wrongpassword"
+                                        }
+                                        """)
                 )
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getUsersWithoutAuthShouldBeUnauthorized() throws Exception {
+        mvc.perform(get("/api/v1/users"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getUserWithoutTokenShouldReturnUnauthorized() throws Exception {
+        mvc.perform(get("/api/v1/users/getUser"))
                 .andExpect(status().isUnauthorized());
     }
 }
