@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/users")
 @AllArgsConstructor
 public class UserController {
+
     private final UserService userService;
 
     @Operation(
@@ -45,11 +46,11 @@ public class UserController {
     @PostMapping("/registration")
     public ResponseEntity<Void> registration(@RequestBody @Valid UserCreateVO userRegistration) {
         userService.register(userRegistration);
-
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Login user.",
+    @Operation(
+            summary = "Login user.",
             description = "User can log in with email/phone and password. " +
                     "If user is already logged in, it will return the token and user details."
     )
@@ -96,7 +97,6 @@ public class UserController {
             @RequestBody @Valid UserUpdateVO userUpdateVO
     ) {
         User updatedUser = userService.updateUser(id, userUpdateVO);
-
         return ResponseEntity.ok(new UserVO(updatedUser));
     }
 
@@ -111,7 +111,6 @@ public class UserController {
             @RequestBody @Valid ChangePasswordVO changePasswordVO
     ) {
         userService.updatePassword(id, changePasswordVO);
-
         return ResponseEntity.ok().build();
     }
 
@@ -135,5 +134,19 @@ public class UserController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<UserVO> getUser(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(new UserVO(user));
+    }
+
+    @Operation(
+            summary = "Update currently logged-in user.",
+            description = "Allows the logged-in user to update their own profile info (e.g. phone, address)."
+    )
+    @PutMapping("/update")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<UserVO> updateSelf(
+            @RequestBody UserUpdateVO userUpdateVO,
+            @AuthenticationPrincipal User user
+    ) {
+        User updated = userService.updateUser(user.getId(), userUpdateVO);
+        return ResponseEntity.ok(new UserVO(updated));
     }
 }

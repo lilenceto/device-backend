@@ -20,45 +20,50 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+    // --- Основни Spring Boot стартери ---
+    implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation "org.springframework.boot:spring-boot-starter-validation"
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // --- Swagger / OpenAPI ---
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+
+    // --- JWT ---
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
-    implementation group: 'com.google.code.gson', name: 'gson', version: '2.8.9'
-    implementation 'me.paulschwarz:spring-dotenv:2.5.4'
-    compileOnly 'org.projectlombok:lombok'
-    runtimeOnly 'org.postgresql:postgresql'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // --- PostgreSQL + H2 за тестове ---
+    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'com.h2database:h2'
+
+    // --- Lombok ---
+    compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+
+    // --- Допълнителни зависимости ---
+    implementation 'me.paulschwarz:spring-dotenv:2.5.4'
+    implementation 'com.google.code.gson:gson:2.8.9'
+
+    // --- Тестове ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+    // Mockito + JUnit Jupiter
     testImplementation 'org.mockito:mockito-core:5.2.0'
-    testImplementation 'junit:junit:4.13.1'
-    testImplementation "org.testcontainers:junit-jupiter"
-    testImplementation "org.testcontainers:postgresql"
-    runtimeOnly 'com.h2database:h2'
+
+    // ✅ Testcontainers (реални интеграционни тестове)
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+
+    // Не е нужно junit:junit (Jupiter вече го съдържа)
 }
 
 tasks.named('test') {
     useJUnitPlatform()
-}
-
-test {
-    exclude '**/CallExternalAPITest.class'
     finalizedBy jacocoTestReport
-    useJUnitPlatform()
-}
-
-jacocoTestReport {
-    dependsOn test
-}
-
-tasks.withType(Test) {
     testLogging {
         exceptionFormat "full"
         events "started", "skipped", "passed", "failed"
@@ -66,7 +71,11 @@ tasks.withType(Test) {
     }
 }
 
+jacocoTestReport {
+    dependsOn test
+}
+
 jar {
-    archiveBaseName = 'gs-gradle'
-    archiveVersion =  '0.1.0'
+    archiveBaseName = 'device-backend'
+    archiveVersion = '0.1.0'
 }
