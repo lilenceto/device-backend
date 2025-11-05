@@ -31,9 +31,6 @@ class UserRepoTests {
         userRepository.save(user);
     }
 
-    //tuka raboti i si slagai neshtta za da moje da komitnesh i pushnesh posle za da ti e svurzano s repoto
-    //commitni neshto
-
     @AfterEach
     void tearDown() {
         userRepository.deleteAll();
